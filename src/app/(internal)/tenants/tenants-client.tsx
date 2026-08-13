@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Plus, UserSearch, UserX, CheckCircle2, Pencil, Check, X, ChevronDown, ChevronRight, MapPin, Trash2, Power, RotateCcw } from 'lucide-react';
+import { Building2, Plus, UserSearch, UserX, CheckCircle2, Pencil, Check, X, ChevronDown, ChevronRight, MapPin, Trash2, Power, RotateCcw, Image as ImageIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { TenantRow } from './page';
 import BrandingSettings from '../branding-settings';
@@ -248,7 +248,7 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
 
   return (
     <div className="space-y-8">
-      {/* Add new tenant */}
+      {/* Add new tenant form remains exactly the same */}
       <div className="glass-panel p-6 rounded-2xl">
         <div className="flex items-center gap-2 mb-4">
           <Plus className="h-5 w-5 text-primary" />
@@ -385,7 +385,7 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
         </div>
         {listError && <p className="text-xs text-red-400 mb-3">{listError}</p>}
         <p className="text-xs text-gray-500 mb-4">
-          Klik ikon pensil buat ganti nama barbershop, atau klik jumlah outlet buat lihat & ganti nama tiap cabang.
+          Klik ikon pensil buat ganti nama barbershop, tombol branding untuk atur logo, atau klik jumlah outlet buat lihat cabang.
         </p>
         {tenants.length === 0 ? (
           <p className="text-sm text-gray-400">Belum ada barbershop terdaftar.</p>
@@ -394,7 +394,7 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-gray-500 bg-white/5">
-                  <th className="px-4 py-3 font-medium">Nama</th>
+                  <th className="px-4 py-3 font-medium">Nama & Branding</th>
                   <th className="px-4 py-3 font-medium">Slug</th>
                   <th className="px-4 py-3 font-medium">Owner</th>
                   <th className="px-4 py-3 font-medium">Outlet</th>
@@ -435,15 +435,26 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1.5 group">
-                            <span>{t.name}</span>
+                          <div className="flex flex-col items-start gap-1 group">
+                            <div className="flex items-center gap-1.5">
+                              <span>{t.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => startEditTenant(t)}
+                                aria-label="Ganti nama barbershop"
+                                className="text-gray-600 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                            {/* Tombol Branding Dipindahkan Ke Sini Agar Jelas */}
                             <button
                               type="button"
-                              onClick={() => startEditTenant(t)}
-                              aria-label="Ganti nama barbershop"
-                              className="text-gray-600 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => setExpandedTenantId(expandedTenantId === `branding:${t.id}` ? null : (`branding:${t.id}` as string))}
+                              className="inline-flex items-center gap-1 text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded hover:bg-primary/20 transition-colors opacity-0 group-hover:opacity-100"
                             >
-                              <Pencil className="h-3.5 w-3.5" />
+                              <ImageIcon className="h-3 w-3" />
+                              Atur Branding (Logo)
                             </button>
                           </div>
                         )}
@@ -466,13 +477,6 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
                           )}
                           {t.branches.length} outlet
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setExpandedTenantId(expandedTenantId === `branding:${t.id}` ? null : (`branding:${t.id}` as string))}
-                          className="block text-xs text-gray-500 hover:text-primary mt-1 transition-colors"
-                        >
-                          Atur Branding
-                        </button>
                       </td>
                       <td className="px-4 py-3">
                         <button
@@ -480,8 +484,8 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
                           onClick={() => toggleStatus(t)}
                           title={t.status === 'active' ? 'Klik untuk menonaktifkan' : 'Klik untuk mengaktifkan'}
                           className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-colors ${t.status === 'active'
-                              ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                              : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                            ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                            : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
                             }`}
                         >
                           <Power className="h-3 w-3" />
@@ -490,18 +494,23 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
                       </td>
                       <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{formatDate(t.created_at)}</td>
                     </tr>
+
+                    {/* Area Pengaturan Branding (Expanded) */}
                     {expandedTenantId === `branding:${t.id}` && (
                       <tr className="border-t border-[var(--border)] bg-white/[0.02]">
-                        <td colSpan={6} className="px-4 py-3">
+                        <td colSpan={6} className="px-4 py-5">
                           <BrandingSettings
                             tenantId={t.id}
-                            currentAppName={t.app_name}
+                            // Memastikan kompatibilitas antara schema lama (app_name) dan baru (branding_name)
+                            currentAppName={(t as any).branding_name ?? (t as any).app_name}
                             currentLogoUrl={t.logo_url}
                             fallbackName={t.name}
                           />
                         </td>
                       </tr>
                     )}
+
+                    {/* Area Pengaturan Outlet (Expanded) */}
                     {expandedTenantId === t.id && (
                       <tr className="border-t border-[var(--border)] bg-white/[0.02]">
                         <td colSpan={6} className="px-4 py-3">

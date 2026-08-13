@@ -37,35 +37,47 @@ export default async function InternalLayout({
   let brandLogoUrl: string | null = null;
   let superadminTenants: { id: string; name: string }[] = [];
   let managedTenantId: string | null = null;
+
   if (current) {
     const supabase = await createClient();
     if (isSuperadmin) {
       // Superadmin memilih barbershop yang dikelola lewat switcher (cookie), bukan tenant miliknya.
       const cookieStore = await cookies();
       managedTenantId = cookieStore.get(MANAGE_TENANT_COOKIE)?.value ?? null;
+
       const { data: tenantsData } = await supabase
         .from('tenants')
         .select('id, name')
         .order('name', { ascending: true });
+
       superadminTenants = (tenantsData as { id: string; name: string }[] | null) ?? [];
       tenantName = superadminTenants.find((t) => t.id === managedTenantId)?.name ?? null;
+
       if (managedTenantId) {
+        // PERBAIKAN: Ubah app_name menjadi branding_name agar sesuai dengan schema Supabase
         const { data: brandTenant } = await supabase
           .from('tenants')
-          .select('app_name, logo_url')
+          .select('branding_name, logo_url')
           .eq('id', managedTenantId)
           .single();
-        const bt = brandTenant as { app_name: string | null; logo_url: string | null } | null;
-        brandName = bt?.app_name ?? tenantName;
+
+        const bt = brandTenant as { branding_name: string | null; logo_url: string | null } | null;
+        brandName = bt?.branding_name ?? tenantName;
         brandLogoUrl = bt?.logo_url ?? null;
       }
     } else {
       const { data: tenantId } = await supabase.rpc('current_tenant_id');
       if (tenantId) {
-        const { data: tenant } = await supabase.from('tenants').select('name, app_name, logo_url').eq('id', tenantId).single();
-        const t = tenant as { name: string; app_name: string | null; logo_url: string | null } | null;
+        // PERBAIKAN: Ubah app_name menjadi branding_name agar sesuai dengan schema Supabase
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('name, branding_name, logo_url')
+          .eq('id', tenantId)
+          .single();
+
+        const t = tenant as { name: string; branding_name: string | null; logo_url: string | null } | null;
         tenantName = t?.name ?? null;
-        brandName = t?.app_name ?? tenantName;
+        brandName = t?.branding_name ?? tenantName;
         brandLogoUrl = t?.logo_url ?? null;
       }
     }

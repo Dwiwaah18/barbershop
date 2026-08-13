@@ -46,12 +46,14 @@ export default async function POSPage({
 
   const [{ data }, { data: branchRow }] = await Promise.all([
     supabase.from('services').select('*').eq('branch_id', branchId).order('name', { ascending: true }),
-    supabase.from('branches').select('tenant:tenant_id(qris_image_url)').eq('id', branchId).single(),
+    // PERBAIKAN: Menggunakan relasi tabel 'tenants' untuk mengambil qris_image_url
+    supabase.from('branches').select('tenant:tenants(qris_image_url)').eq('id', branchId).single(),
   ]);
 
   const services = (data ?? []) as Service[];
-  const qrisImageUrl =
-    (branchRow as { tenant: { qris_image_url: string | null } | null } | null)?.tenant?.qris_image_url ?? null;
+
+  // PERBAIKAN: Penarikan data diperbaiki agar tidak mengembalikan null secara diam-diam
+  const qrisImageUrl = (branchRow as any)?.tenant?.qris_image_url ?? null;
 
   const branchName = myBranches.find((b) => b.id === branchId)?.name ?? 'Cabang';
 

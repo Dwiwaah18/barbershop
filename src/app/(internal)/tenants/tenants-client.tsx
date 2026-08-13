@@ -41,7 +41,8 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [listError, setListError] = useState<string | null>(null);
-  const [expandedTenantId, setExpandedTenantId] = useState<string | null>(null);
+  const [expandedBranchesId, setExpandedBranchesId] = useState<string | null>(null);
+  const [expandedBrandingId, setExpandedBrandingId] = useState<string | null>(null);
   const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
   const [tenantNameDraft, setTenantNameDraft] = useState('');
   const [savingTenant, setSavingTenant] = useState(false);
@@ -435,23 +436,22 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
                             </button>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-start gap-1 group">
+                          <div className="flex flex-col items-start gap-1">
                             <div className="flex items-center gap-1.5">
                               <span>{t.name}</span>
                               <button
                                 type="button"
                                 onClick={() => startEditTenant(t)}
                                 aria-label="Ganti nama barbershop"
-                                className="text-gray-600 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                                className="text-gray-600 hover:text-primary transition-colors"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
                             </div>
-                            {/* Tombol Branding Dipindahkan Ke Sini Agar Jelas */}
                             <button
                               type="button"
-                              onClick={() => setExpandedTenantId(expandedTenantId === `branding:${t.id}` ? null : (`branding:${t.id}` as string))}
-                              className="inline-flex items-center gap-1 text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded hover:bg-primary/20 transition-colors opacity-0 group-hover:opacity-100"
+                              onClick={() => setExpandedBrandingId(expandedBrandingId === t.id ? null : t.id)}
+                              className="inline-flex items-center gap-1 text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded hover:bg-primary/20 transition-colors"
                             >
                               <ImageIcon className="h-3 w-3" />
                               Atur Branding (Logo)
@@ -467,10 +467,10 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
                       <td className="px-4 py-3 text-gray-400">
                         <button
                           type="button"
-                          onClick={() => setExpandedTenantId(expandedTenantId === t.id ? null : t.id)}
+                          onClick={() => setExpandedBranchesId(expandedBranchesId === t.id ? null : t.id)}
                           className="inline-flex items-center gap-1 hover:text-primary transition-colors"
                         >
-                          {expandedTenantId === t.id ? (
+                          {expandedBranchesId === t.id ? (
                             <ChevronDown className="h-3.5 w-3.5" />
                           ) : (
                             <ChevronRight className="h-3.5 w-3.5" />
@@ -496,7 +496,7 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
                     </tr>
 
                     {/* Area Pengaturan Branding (Expanded) */}
-                    {expandedTenantId === `branding:${t.id}` && (
+                    {expandedBrandingId === t.id && (
                       <tr className="border-t border-[var(--border)] bg-white/[0.02]">
                         <td colSpan={6} className="px-4 py-5">
                           <BrandingSettings
@@ -511,7 +511,7 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
                     )}
 
                     {/* Area Pengaturan Outlet (Expanded) */}
-                    {expandedTenantId === t.id && (
+                    {expandedBranchesId === t.id && (
                       <tr className="border-t border-[var(--border)] bg-white/[0.02]">
                         <td colSpan={6} className="px-4 py-3">
                           {t.branches.length === 0 ? (

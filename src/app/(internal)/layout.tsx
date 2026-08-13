@@ -33,6 +33,8 @@ export default async function InternalLayout({
   const homeHref = isOwner ? '/dashboard' : isCashier ? '/queue' : isBarber ? '/attendance' : '/';
 
   let tenantName: string | null = null;
+  let brandName: string | null = null;
+  let brandLogoUrl: string | null = null;
   let superadminTenants: { id: string; name: string }[] = [];
   let managedTenantId: string | null = null;
   if (current) {
@@ -47,11 +49,24 @@ export default async function InternalLayout({
         .order('name', { ascending: true });
       superadminTenants = (tenantsData as { id: string; name: string }[] | null) ?? [];
       tenantName = superadminTenants.find((t) => t.id === managedTenantId)?.name ?? null;
+      if (managedTenantId) {
+        const { data: brandTenant } = await supabase
+          .from('tenants')
+          .select('app_name, logo_url')
+          .eq('id', managedTenantId)
+          .single();
+        const bt = brandTenant as { app_name: string | null; logo_url: string | null } | null;
+        brandName = bt?.app_name ?? tenantName;
+        brandLogoUrl = bt?.logo_url ?? null;
+      }
     } else {
       const { data: tenantId } = await supabase.rpc('current_tenant_id');
       if (tenantId) {
-        const { data: tenant } = await supabase.from('tenants').select('name').eq('id', tenantId).single();
-        tenantName = tenant?.name ?? null;
+        const { data: tenant } = await supabase.from('tenants').select('name, app_name, logo_url').eq('id', tenantId).single();
+        const t = tenant as { name: string; app_name: string | null; logo_url: string | null } | null;
+        tenantName = t?.name ?? null;
+        brandName = t?.app_name ?? tenantName;
+        brandLogoUrl = t?.logo_url ?? null;
       }
     }
   }
@@ -69,6 +84,8 @@ export default async function InternalLayout({
       tenantName={tenantName}
       superadminTenants={superadminTenants}
       managedTenantId={managedTenantId}
+      brandName={brandName}
+      brandLogoUrl={brandLogoUrl}
     >
       {children}
     </InternalLayoutClient>

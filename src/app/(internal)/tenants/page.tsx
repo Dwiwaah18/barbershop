@@ -12,6 +12,7 @@ export type TenantRow = {
   owner: { full_name: string | null; phone: string | null } | null;
   branches: { id: string; name: string }[];
   app_name: string | null;
+  branding_name: string | null;
   logo_url: string | null;
 };
 
@@ -32,7 +33,7 @@ export default async function TenantsPage() {
   const supabase = await createClient();
   const { data } = await supabase
     .from('tenants')
-    .select('id, slug, name, status, created_at, owner_id, owner:owner_id(full_name, phone), branches(id, name), app_name, logo_url')
+    .select('id, slug, name, status, created_at, owner_id, owner:owner_id(full_name, phone), branches(id, name), app_name, branding_name, logo_url')
     .order('created_at', { ascending: false });
 
   const tenants = (data as unknown as TenantRow[] | null) ?? [];

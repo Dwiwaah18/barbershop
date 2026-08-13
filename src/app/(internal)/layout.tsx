@@ -1,7 +1,10 @@
 import Link from 'next/link';
-import { LayoutDashboard, Users, ShoppingCart, Clock, ClipboardCheck, Scissors, Wallet, UserCog, Scroll, DollarSign, ArrowLeft, FileBarChart, PiggyBank, ClipboardList, Building2, MapPin } from 'lucide-react';
+import { LayoutDashboard, Users, Users2, ShoppingCart, Clock, ClipboardCheck, Scissors, Wallet, UserCog, Scroll, DollarSign, ArrowLeft, FileBarChart, PiggyBank, ClipboardList, Building2, MapPin } from 'lucide-react';
+import { cookies } from 'next/headers';
 import { getCurrentProfile } from '@/lib/supabase/current-profile';
 import { createClient } from '@/lib/supabase/server';
+import { MANAGE_TENANT_COOKIE } from '@/lib/manage-tenant';
+import SuperadminTenantSwitcher from './superadmin-tenant-switcher';
 
 const roleLabel: Record<string, string> = {
   cashier: 'Cashier Role',
@@ -24,21 +27,31 @@ export default async function InternalLayout({
 
   const isOwner = role === 'owner' || role === 'superadmin';
   const isCashier = role === 'cashier' || isOwner;
-  const isBarber = role === 'barber';
+  const isBarber = role === 'barber' || current?.profile.is_working_barber === true;
   const isSuperadmin = role === 'superadmin';
   const homeHref = isOwner ? '/dashboard' : isCashier ? '/queue' : isBarber ? '/attendance' : '/';
 
   let tenantName: string | null = null;
+  let superadminTenants: { id: string; name: string }[] = [];
+  let managedTenantId: string | null = null;
   if (current) {
     const supabase = await createClient();
-    const { data: tenantId } = await supabase.rpc('current_tenant_id');
-    if (tenantId) {
-      const { data: tenant } = await supabase
+    if (isSuperadmin) {
+      // Superadmin memilih barbershop yang dikelola lewat switcher (cookie), bukan tenant miliknya.
+      const cookieStore = await cookies();
+      managedTenantId = cookieStore.get(MANAGE_TENANT_COOKIE)?.value ?? null;
+      const { data: tenantsData } = await supabase
         .from('tenants')
-        .select('name')
-        .eq('id', tenantId)
-        .single();
-      tenantName = tenant?.name ?? null;
+        .select('id, name')
+        .order('name', { ascending: true });
+      superadminTenants = (tenantsData as { id: string; name: string }[] | null) ?? [];
+      tenantName = superadminTenants.find((t) => t.id === managedTenantId)?.name ?? null;
+    } else {
+      const { data: tenantId } = await supabase.rpc('current_tenant_id');
+      if (tenantId) {
+        const { data: tenant } = await supabase.from('tenants').select('name').eq('id', tenantId).single();
+        tenantName = tenant?.name ?? null;
+      }
     }
   }
 
@@ -52,10 +65,16 @@ export default async function InternalLayout({
         </Link>
 
         <div className="px-6 py-2.5 border-b border-[var(--border)] shrink-0 bg-white/5">
-          <p className="text-[10px] text-gray-500 uppercase tracking-wider">Barbershop Aktif</p>
-          <p className="text-sm font-semibold text-primary truncate">
-            {tenantName ?? (isSuperadmin ? 'Superadmin (tanpa tenant)' : 'Belum terdaftar di tenant')}
+          <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-1">
+            {isSuperadmin ? 'Kelola Barbershop' : 'Barbershop Aktif'}
           </p>
+          {isSuperadmin ? (
+            <SuperadminTenantSwitcher tenants={superadminTenants} selectedId={managedTenantId} />
+          ) : (
+            <p className="text-sm font-semibold text-primary truncate">
+              {tenantName ?? 'Belum terdaftar di tenant'}
+            </p>
+          )}
         </div>
 
         <nav className="flex-1 py-6 px-3 space-y-2 overflow-y-auto">
@@ -104,6 +123,10 @@ export default async function InternalLayout({
               <Link href="/topups" className="flex items-center px-3 py-3 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors text-gray-400">
                 <Wallet className="h-5 w-5 mr-3" />
                 Verifikasi Top-up
+              </Link>
+              <Link href="/families" className="flex items-center px-3 py-3 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors text-gray-400">
+                <Users2 className="h-5 w-5 mr-3" />
+                Kelola Keluarga
               </Link>
             </>
           )}

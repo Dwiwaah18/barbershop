@@ -8,6 +8,8 @@ import BranchPicker from './branch-picker';
 
 export type BookingWithItems = Booking & { booking_items: { service_name: string }[] };
 export type UpcomingBooking = BookingWithItems & { barber: { full_name: string | null } | null };
+// In Progress butuh total durasi (menit) untuk hitung mundur batas waktu cukur di Queue Management.
+export type InProgressBooking = BookingWithItems & { total_duration_minutes: number };
 export type BarberOption = { id: string; full_name: string | null };
 export type ServiceOption = { id: string; name: string; price: number };
 
@@ -63,7 +65,7 @@ export default async function QueueManagementPage({
       .limit(20),
     supabase
       .from('bookings')
-      .select('*, booking_items(service_name)')
+      .select('*, booking_items(service_name, service:service_id(duration_minutes))')
       .eq('branch_id', branchId)
       .eq('status', 'confirmed')
       .order('started_at', { ascending: true }),
@@ -78,7 +80,7 @@ export default async function QueueManagementPage({
       .from('profiles')
       .select('id, full_name')
       .eq('branch_id', branchId)
-      .eq('role', 'barber')
+      .or('role.eq.barber,is_working_barber.eq.true')
       .order('full_name', { ascending: true }),
     supabase
       .from('services')
@@ -91,7 +93,15 @@ export default async function QueueManagementPage({
   const branchName = branchRes.data?.name ?? 'Cabang';
   const waiting = (waitingRes.data ?? []) as BookingWithItems[];
   const upcoming = (upcomingRes.data ?? []) as unknown as UpcomingBooking[];
-  const inProgress = (inProgressRes.data ?? []) as BookingWithItems[];
+  const inProgressRaw = (inProgressRes.data ?? []) as unknown as (Booking & {
+    booking_items: { service_name: string; service: { duration_minutes: number } | null }[];
+  })[];
+  const inProgress = inProgressRaw.map((b) => ({
+    ...b,
+    // Total durasi = jumlah durasi tiap layanan booking; fallback 30 menit kalau data durasi kosong.
+    total_duration_minutes:
+      b.booking_items.reduce((sum, bi) => sum + (bi.service?.duration_minutes ?? 0), 0) || 30,
+  })) as InProgressBooking[];
   const completedAll = (completedRes.data ?? []) as BookingWithItems[];
   const barbers = (barbersRes.data ?? []) as BarberOption[];
   const services = (servicesRes.data ?? []) as ServiceOption[];

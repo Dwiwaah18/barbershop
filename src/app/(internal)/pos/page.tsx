@@ -44,13 +44,14 @@ export default async function POSPage({
 
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from('services')
-    .select('*')
-    .eq('branch_id', branchId)
-    .order('name', { ascending: true });
+  const [{ data }, { data: branchRow }] = await Promise.all([
+    supabase.from('services').select('*').eq('branch_id', branchId).order('name', { ascending: true }),
+    supabase.from('branches').select('tenant:tenant_id(qris_image_url)').eq('id', branchId).single(),
+  ]);
 
   const services = (data ?? []) as Service[];
+  const qrisImageUrl =
+    (branchRow as { tenant: { qris_image_url: string | null } | null } | null)?.tenant?.qris_image_url ?? null;
 
   const branchName = myBranches.find((b) => b.id === branchId)?.name ?? 'Cabang';
 
@@ -66,6 +67,7 @@ export default async function POSPage({
         cashierId={userId}
         cashierName={current.profile.full_name ?? 'Staff'}
         branchName={branchName}
+        qrisImageUrl={qrisImageUrl}
       />
     </div>
   );

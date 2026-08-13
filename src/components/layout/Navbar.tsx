@@ -1,7 +1,16 @@
 import Link from 'next/link';
 import { Scissors } from 'lucide-react';
+import { createClient } from '@/lib/supabase/server';
+import { isSupabaseConfigured } from '@/lib/supabase/config';
+import { SignOutButton } from './SignOutButton';
 
-export function Navbar() {
+export async function Navbar() {
+  let user = null;
+  if (isSupabaseConfigured()) {
+    const supabase = await createClient();
+    user = (await supabase.auth.getUser()).data.user;
+  }
+
   return (
     <nav className="fixed top-0 w-full z-50 glass border-b border-[var(--border)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -16,14 +25,21 @@ export function Navbar() {
             <div className="ml-10 flex items-baseline space-x-8">
               <Link href="/" className="hover:text-primary transition-colors px-3 py-2 rounded-md text-sm font-medium">Home</Link>
               <Link href="/booking" className="hover:text-primary transition-colors px-3 py-2 rounded-md text-sm font-medium">Booking</Link>
-              <Link href="/dashboard" className="hover:text-primary transition-colors px-3 py-2 rounded-md text-sm font-medium">Dashboard</Link>
+              <Link href="/branches" className="hover:text-primary transition-colors px-3 py-2 rounded-md text-sm font-medium">Branches</Link>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Link href="/profile" className="hidden md:flex hover:text-primary transition-colors px-3 py-2 rounded-md text-sm font-medium">Profile</Link>
-            <Link href="/auth" className="bg-primary hover:bg-amber-700 text-primary-foreground px-4 py-2 rounded-md text-sm font-medium transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-amber-900/20">
-              Sign In
-            </Link>
+            {user ? (
+              <>
+                <Link href="/my-bookings" className="hidden md:flex hover:text-primary transition-colors px-3 py-2 rounded-md text-sm font-medium">My Bookings</Link>
+                <Link href="/profile" className="hidden md:flex hover:text-primary transition-colors px-3 py-2 rounded-md text-sm font-medium">Profile</Link>
+                <SignOutButton />
+              </>
+            ) : (
+              <Link href="/auth" className="bg-primary hover:bg-amber-700 text-primary-foreground px-4 py-2 rounded-md text-sm font-medium transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-amber-900/20">
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </div>

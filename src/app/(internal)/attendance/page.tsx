@@ -54,7 +54,7 @@ export default async function AttendancePage() {
     <div className="max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">Staff Attendance</h1>
 
-      {current?.profile.role === 'barber' && (
+      {(current?.profile.role === 'barber' || current?.profile.is_working_barber) && (
         <BarberStatusToggle userId={current.userId} barberStatus={current.profile.barber_status} />
       )}
 

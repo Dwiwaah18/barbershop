@@ -49,6 +49,11 @@ export default async function ProfilePage() {
   const familyMembers = (familyData as Profile[] | null) ?? [];
   const walletTransactions = (walletTxData as WalletTransaction[] | null) ?? [];
 
+  // Shared wallet: saldo yang ditampilkan & dipakai adalah saldo dompet keluarga (kepala keluarga),
+  // bukan saldo pribadi baris ini. Anggota keluarga berbagi satu dompet — lihat wallet_head_id di schema.
+  const headProfile = familyMembers.find((m) => m.id === headId);
+  const sharedBalance = headProfile?.wallet_balance ?? profile.wallet_balance;
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
       <h1 className="text-4xl font-bold mb-8">My Profile</h1>
@@ -64,7 +69,7 @@ export default async function ProfilePage() {
           <p className="text-gray-400 text-sm mb-1">Available Balance</p>
           <h3 className="text-5xl font-extrabold mb-6 tracking-tighter">
             <span className="text-2xl align-top text-gray-500 mr-1">Rp</span>
-            {Math.round(profile.wallet_balance).toLocaleString('id-ID')}
+            {Math.round(sharedBalance).toLocaleString('id-ID')}
           </h3>
           <Link href="/deposit" className="w-full inline-flex justify-center items-center px-4 py-3 bg-primary hover:bg-amber-600 rounded-xl font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-amber-900/30">
             Top Up Balance

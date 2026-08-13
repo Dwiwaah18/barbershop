@@ -40,7 +40,7 @@ export default async function StaffPage({
 
   let profileQuery = supabase.from('profiles').select('*').order('created_at', { ascending: false });
   if (isSuperadmin && tenantId) {
-    profileQuery = profileQuery.or(`tenant_id.eq.${tenantId},tenant_id.is.null`);
+    profileQuery = profileQuery.or(`tenant_id.eq.${tenantId},and(tenant_id.is.null,role.eq.customer)`);
   }
 
   const branchQuery = isSuperadmin

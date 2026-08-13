@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Building2, Plus, UserSearch, UserX, CheckCircle2, Pencil, Check, X, ChevronDown, ChevronRight, MapPin, Trash2, Power, RotateCcw } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { TenantRow } from './page';
+import BrandingSettings from '../branding-settings';
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -465,17 +466,23 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
                           )}
                           {t.branches.length} outlet
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setExpandedTenantId(expandedTenantId === `branding:${t.id}` ? null : (`branding:${t.id}` as string))}
+                          className="block text-xs text-gray-500 hover:text-primary mt-1 transition-colors"
+                        >
+                          Atur Branding
+                        </button>
                       </td>
                       <td className="px-4 py-3">
                         <button
                           type="button"
                           onClick={() => toggleStatus(t)}
                           title={t.status === 'active' ? 'Klik untuk menonaktifkan' : 'Klik untuk mengaktifkan'}
-                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-colors ${
-                            t.status === 'active'
+                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-colors ${t.status === 'active'
                               ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
                               : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                          }`}
+                            }`}
                         >
                           <Power className="h-3 w-3" />
                           {t.status === 'active' ? 'Aktif' : 'Nonaktif'}
@@ -483,6 +490,18 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
                       </td>
                       <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{formatDate(t.created_at)}</td>
                     </tr>
+                    {expandedTenantId === `branding:${t.id}` && (
+                      <tr className="border-t border-[var(--border)] bg-white/[0.02]">
+                        <td colSpan={6} className="px-4 py-3">
+                          <BrandingSettings
+                            tenantId={t.id}
+                            currentAppName={t.app_name}
+                            currentLogoUrl={t.logo_url}
+                            fallbackName={t.name}
+                          />
+                        </td>
+                      </tr>
+                    )}
                     {expandedTenantId === t.id && (
                       <tr className="border-t border-[var(--border)] bg-white/[0.02]">
                         <td colSpan={6} className="px-4 py-3">

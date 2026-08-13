@@ -3,10 +3,10 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { 
-  LayoutDashboard, Users, Users2, ShoppingCart, Clock, ClipboardCheck, 
-  Scissors, Wallet, UserCog, Scroll, DollarSign, ArrowLeft, FileBarChart, 
-  PiggyBank, ClipboardList, Building2, MapPin, Menu, X 
+import {
+  LayoutDashboard, Users, Users2, ShoppingCart, Clock, ClipboardCheck,
+  Scissors, Wallet, UserCog, Scroll, DollarSign, ArrowLeft, FileBarChart,
+  PiggyBank, ClipboardList, Building2, MapPin, Menu, X
 } from 'lucide-react';
 import SuperadminTenantSwitcher from './superadmin-tenant-switcher';
 
@@ -31,6 +31,8 @@ interface InternalLayoutClientProps {
   tenantName: string | null;
   superadminTenants: { id: string; name: string }[];
   managedTenantId: string | null;
+  brandName: string | null;
+  brandLogoUrl: string | null;
 }
 
 export default function InternalLayoutClient({
@@ -45,11 +47,14 @@ export default function InternalLayoutClient({
   homeHref,
   tenantName,
   superadminTenants,
-  managedTenantId
+  managedTenantId,
+  brandName,
+  brandLogoUrl,
 }: InternalLayoutClientProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const pathname = usePathname();
   const roleText = role ? roleLabel[role] ?? role : '';
+  const displayBrandName = brandName ?? 'SystemPOS';
 
   // Tutup sidebar jika route berubah (saat klik link di mobile)
   useEffect(() => {
@@ -58,10 +63,10 @@ export default function InternalLayoutClient({
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-950 text-slate-50 relative">
-      
+
       {/* Mobile Overlay */}
       {isMobileOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setIsMobileOpen(false)}
         />
@@ -75,11 +80,16 @@ export default function InternalLayoutClient({
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <div className="h-16 flex items-center justify-between px-6 border-b border-[var(--border)] shrink-0 bg-black/20">
-          <Link href={homeHref} className="flex items-center hover:opacity-80 transition-opacity">
-            <Scissors className="h-6 w-6 text-primary mr-2" />
-            <span className="font-bold text-lg">System<span className="text-primary">POS</span></span>
+          <Link href={homeHref} className="flex items-center hover:opacity-80 transition-opacity min-w-0">
+            {brandLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={brandLogoUrl} alt={displayBrandName} className="h-6 w-6 mr-2 object-contain shrink-0" />
+            ) : (
+              <Scissors className="h-6 w-6 text-primary mr-2 shrink-0" />
+            )}
+            <span className="font-bold text-lg truncate">{displayBrandName}</span>
           </Link>
-          <button 
+          <button
             className="md:hidden p-1 text-gray-400 hover:text-white"
             onClick={() => setIsMobileOpen(false)}
           >
@@ -237,14 +247,19 @@ export default function InternalLayoutClient({
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-900/50">
-        
+
         {/* Mobile Header */}
         <header className="md:hidden h-16 border-b border-[var(--border)] bg-slate-950/80 backdrop-blur-md flex items-center justify-between px-4 shrink-0 z-30">
-          <div className="flex items-center">
-            <Scissors className="h-6 w-6 text-primary mr-2" />
-            <span className="font-bold text-lg">System<span className="text-primary">POS</span></span>
+          <div className="flex items-center min-w-0">
+            {brandLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={brandLogoUrl} alt={displayBrandName} className="h-6 w-6 mr-2 object-contain shrink-0" />
+            ) : (
+              <Scissors className="h-6 w-6 text-primary mr-2 shrink-0" />
+            )}
+            <span className="font-bold text-lg truncate">{displayBrandName}</span>
           </div>
-          <button 
+          <button
             onClick={() => setIsMobileOpen(true)}
             className="p-2 -mr-2 text-gray-400 hover:text-white transition-colors"
           >

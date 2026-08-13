@@ -4,6 +4,7 @@ import { getManagedContext } from '@/lib/supabase/managed-branches';
 import { ManagedBranchEmpty } from '../managed-branch-empty';
 import OutletsClient from './outlets-client';
 import QrisSettings from './qris-settings';
+import BrandingSettings from '../branding-settings';
 
 export default async function OutletsPage() {
   const { current, branches, isSuperadmin, managedTenantId, needsTenantSelection } = await getManagedContext();
@@ -20,14 +21,21 @@ export default async function OutletsPage() {
   }
 
   let qrisImageUrl: string | null = null;
+  let tenantName: string | null = null;
+  let tenantAppName: string | null = null;
+  let tenantLogoUrl: string | null = null;
   if (managedTenantId) {
     const supabase = await createClient();
     const { data: tenant } = await supabase
       .from('tenants')
-      .select('qris_image_url')
+      .select('name, qris_image_url, app_name, logo_url')
       .eq('id', managedTenantId)
       .single();
-    qrisImageUrl = (tenant as { qris_image_url: string | null } | null)?.qris_image_url ?? null;
+    const t = tenant as { name: string; qris_image_url: string | null; app_name: string | null; logo_url: string | null } | null;
+    qrisImageUrl = t?.qris_image_url ?? null;
+    tenantName = t?.name ?? null;
+    tenantAppName = t?.app_name ?? null;
+    tenantLogoUrl = t?.logo_url ?? null;
   }
 
   return (
@@ -38,6 +46,14 @@ export default async function OutletsPage() {
           ? 'Cabang milik barbershop yang sedang Anda kelola. Untuk menambah cabang baru, gunakan menu Kelola Barbershop.'
           : 'Tambah outlet baru untuk barbershop Anda sendiri, tanpa perlu lewat superadmin.'}
       </p>
+      {managedTenantId && (
+        <BrandingSettings
+          tenantId={managedTenantId}
+          currentAppName={tenantAppName}
+          currentLogoUrl={tenantLogoUrl}
+          fallbackName={tenantName ?? 'SystemPOS'}
+        />
+      )}
       {managedTenantId && <QrisSettings tenantId={managedTenantId} currentImageUrl={qrisImageUrl} />}
       {isSuperadmin && needsTenantSelection ? (
         <ManagedBranchEmpty needsTenantSelection />

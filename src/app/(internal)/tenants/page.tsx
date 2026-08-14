@@ -31,10 +31,14 @@ export default async function TenantsPage() {
   }
 
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('tenants')
     .select('id, slug, name, status, created_at, owner_id, owner:owner_id(full_name, phone), branches(id, name), app_name, branding_name, logo_url')
     .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Gagal ambil data tenants:', error);
+  }
 
   const tenants = (data as unknown as TenantRow[] | null) ?? [];
 

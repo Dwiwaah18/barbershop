@@ -143,6 +143,26 @@ export default function QueueBoard({
   };
 
   const handleComplete = async (bookingId: string, customerName: string | null) => {
+    const booking = inProgress.find((b) => b.id === bookingId);
+
+    // Pre-check saldo Share Wallet SEBELUM commit — supaya kapster tahu dulu kalau saldo kurang,
+    // dan bisa minta pembayaran cash/QRIS langsung ke pelanggan sebelum klik selesai.
+    if (booking?.customer_id && booking.total_price > 0) {
+      const { data: walletRow } = await supabase
+        .from('customer_effective_wallet')
+        .select('effective_balance')
+        .eq('id', booking.customer_id)
+        .maybeSingle();
+
+      const balance = walletRow?.effective_balance ?? 0;
+      if (balance < booking.total_price) {
+        const confirmed = window.confirm(
+          `Saldo Share Wallet ${customerName ?? 'pelanggan ini'} tidak cukup (saldo: Rp ${Math.round(balance).toLocaleString('id-ID')}, tagihan: Rp ${Math.round(booking.total_price).toLocaleString('id-ID')}).\n\nPastikan sudah terima pembayaran CASH atau QRIS langsung dari pelanggan sebelum lanjut. Transaksi akan tercatat sebagai Cash di Point of Sales.\n\nSudah terima pembayaran dan mau lanjut?`
+        );
+        if (!confirmed) return;
+      }
+    }
+
     setPending(bookingId, true);
     setRowError((prev) => ({ ...prev, [bookingId]: '' }));
     // Mark Complete now also settles payment in the same action — the RPC auto-redeems Share
@@ -334,10 +354,10 @@ export default function QueueBoard({
                   {rem !== null && (
                     <div
                       className={`flex items-center justify-between mb-3 px-3 py-2 rounded-lg text-sm font-semibold tabular-nums ${accent === 'red'
-                          ? 'bg-red-500/15 text-red-300'
-                          : accent === 'amber'
-                            ? 'bg-amber-500/15 text-amber-300'
-                            : 'bg-blue-500/10 text-blue-300'
+                        ? 'bg-red-500/15 text-red-300'
+                        : accent === 'amber'
+                          ? 'bg-amber-500/15 text-amber-300'
+                          : 'bg-blue-500/10 text-blue-300'
                         }`}
                     >
                       <span className="flex items-center gap-1.5">

@@ -124,6 +124,10 @@ export default function InternalLayoutClient({
                 <Users className="h-5 w-5 mr-3" />
                 Queue Management
               </Link>
+              <Link href="/pos" className={`flex items-center px-3 py-2.5 rounded-lg transition-colors ${pathname === '/pos' ? 'bg-primary/20 text-primary' : 'hover:bg-primary/10 hover:text-primary text-gray-400'}`}>
+                <ShoppingCart className="h-5 w-5 mr-3" />
+                Point of Sales
+              </Link>
               <Link href="/my-report" className={`flex items-center px-3 py-2.5 rounded-lg transition-colors ${pathname === '/my-report' ? 'bg-primary/20 text-primary' : 'hover:bg-primary/10 hover:text-primary text-gray-400'}`}>
                 <FileBarChart className="h-5 w-5 mr-3" />
                 Laporan Saya

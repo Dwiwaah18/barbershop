@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock, CheckCircle, CalendarClock, AlarmClock, TimerReset, Scissors } from 'lucide-react';
+import { Clock, CheckCircle, CalendarClock, AlarmClock, TimerReset, Scissors, AlertTriangle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { BookingWithItems, InProgressBooking, UpcomingBooking, BarberOption } from './page';
 
@@ -79,6 +79,12 @@ export default function QueueBoard({
   const [selectedBarber, setSelectedBarber] = useState<Record<string, string>>({});
   const [rowError, setRowError] = useState<Record<string, string>>({});
   const [paymentNotice, setPaymentNotice] = useState<string | null>(null);
+  const [walletConfirm, setWalletConfirm] = useState<{
+    bookingId: string;
+    customerName: string | null;
+    balance: number;
+    total: number;
+  } | null>(null);
 
   // Detak per-detik untuk hitung mundur In Progress (tanpa ini countdown tidak jalan real-time).
   const [now, setNow] = useState(() => Date.now());
@@ -142,27 +148,7 @@ export default function QueueBoard({
     router.refresh();
   };
 
-  const handleComplete = async (bookingId: string, customerName: string | null) => {
-    const booking = inProgress.find((b) => b.id === bookingId);
-
-    // Pre-check saldo Share Wallet SEBELUM commit — supaya kapster tahu dulu kalau saldo kurang,
-    // dan bisa minta pembayaran cash/QRIS langsung ke pelanggan sebelum klik selesai.
-    if (booking?.customer_id && booking.total_price > 0) {
-      const { data: walletRow } = await supabase
-        .from('customer_effective_wallet')
-        .select('effective_balance')
-        .eq('id', booking.customer_id)
-        .maybeSingle();
-
-      const balance = walletRow?.effective_balance ?? 0;
-      if (balance < booking.total_price) {
-        const confirmed = window.confirm(
-          `Saldo Share Wallet ${customerName ?? 'pelanggan ini'} tidak cukup (saldo: Rp ${Math.round(balance).toLocaleString('id-ID')}, tagihan: Rp ${Math.round(booking.total_price).toLocaleString('id-ID')}).\n\nPastikan sudah terima pembayaran CASH atau QRIS langsung dari pelanggan sebelum lanjut. Transaksi akan tercatat sebagai Cash di Point of Sales.\n\nSudah terima pembayaran dan mau lanjut?`
-        );
-        if (!confirmed) return;
-      }
-    }
-
+  const runComplete = async (bookingId: string, customerName: string | null) => {
     setPending(bookingId, true);
     setRowError((prev) => ({ ...prev, [bookingId]: '' }));
     // Mark Complete now also settles payment in the same action — the RPC auto-redeems Share
@@ -185,8 +171,85 @@ export default function QueueBoard({
     router.refresh();
   };
 
+  const handleComplete = async (bookingId: string, customerName: string | null) => {
+    const booking = inProgress.find((b) => b.id === bookingId);
+
+    // Pre-check saldo Share Wallet SEBELUM commit — supaya kapster tahu dulu kalau saldo kurang,
+    // dan bisa minta pembayaran cash/QRIS langsung ke pelanggan sebelum klik selesai.
+    if (booking?.customer_id && booking.total_price > 0) {
+      const { data: walletRow } = await supabase
+        .from('customer_effective_wallet')
+        .select('effective_balance')
+        .eq('id', booking.customer_id)
+        .maybeSingle();
+
+      const balance = walletRow?.effective_balance ?? 0;
+      if (balance < booking.total_price) {
+        setWalletConfirm({ bookingId, customerName, balance, total: booking.total_price });
+        return;
+      }
+    }
+
+    await runComplete(bookingId, customerName);
+  };
+
   return (
     <div className="space-y-6">
+      {walletConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setWalletConfirm(null)}
+          />
+          <div className="relative glass-panel border border-amber-500/30 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0" />
+              <h3 className="text-lg font-semibold">Saldo Share Wallet Tidak Cukup</h3>
+            </div>
+            <p className="text-sm text-gray-300 mb-4">
+              Saldo Share Wallet{' '}
+              <span className="font-medium text-white">{walletConfirm.customerName ?? 'pelanggan ini'}</span>{' '}
+              tidak cukup untuk tagihan ini.
+            </p>
+            <div className="flex items-center justify-between text-sm bg-white/5 border border-[var(--border)] rounded-xl px-4 py-3 mb-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">Saldo</p>
+                <p className="font-semibold text-red-400">Rp {Math.round(walletConfirm.balance).toLocaleString('id-ID')}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">Tagihan</p>
+                <p className="font-semibold text-white">Rp {Math.round(walletConfirm.total).toLocaleString('id-ID')}</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mb-6">
+              Pastikan sudah terima pembayaran <span className="text-gray-300 font-medium">CASH</span> atau{' '}
+              <span className="text-gray-300 font-medium">QRIS</span> langsung dari pelanggan sebelum lanjut.
+              Transaksi akan tercatat sebagai Cash di Point of Sales.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setWalletConfirm(null)}
+                className="flex-1 border border-[var(--border)] hover:bg-white/5 text-gray-300 text-sm font-medium py-2.5 rounded-xl transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const { bookingId, customerName } = walletConfirm;
+                  setWalletConfirm(null);
+                  runComplete(bookingId, customerName);
+                }}
+                className="flex-1 bg-primary hover:bg-amber-700 text-white text-sm font-medium py-2.5 rounded-xl transition-colors"
+              >
+                Sudah Terima, Lanjutkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {paymentNotice && (
         <div className="flex items-start justify-between gap-3 bg-green-500/10 border border-green-500/30 text-green-400 text-sm rounded-2xl px-4 py-3">
           <span>{paymentNotice}</span>
@@ -354,10 +417,10 @@ export default function QueueBoard({
                   {rem !== null && (
                     <div
                       className={`flex items-center justify-between mb-3 px-3 py-2 rounded-lg text-sm font-semibold tabular-nums ${accent === 'red'
-                        ? 'bg-red-500/15 text-red-300'
-                        : accent === 'amber'
-                          ? 'bg-amber-500/15 text-amber-300'
-                          : 'bg-blue-500/10 text-blue-300'
+                          ? 'bg-red-500/15 text-red-300'
+                          : accent === 'amber'
+                            ? 'bg-amber-500/15 text-amber-300'
+                            : 'bg-blue-500/10 text-blue-300'
                         }`}
                     >
                       <span className="flex items-center gap-1.5">

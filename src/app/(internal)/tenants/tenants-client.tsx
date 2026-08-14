@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Building2, Plus, UserSearch, UserX, CheckCircle2, Pencil, Check, X, ChevronDown, ChevronRight, MapPin, Trash2, Power, RotateCcw, Image as ImageIcon } from 'lucide-react';
+import { Building2, Plus, UserSearch, UserX, CheckCircle2, Pencil, Check, X, ChevronDown, ChevronRight, MapPin, Trash2, Power, RotateCcw, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { TenantRow } from './page';
 import BrandingSettings from '../branding-settings';
@@ -43,6 +43,7 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
   const [listError, setListError] = useState<string | null>(null);
   const [expandedBranchesId, setExpandedBranchesId] = useState<string | null>(null);
   const [expandedBrandingId, setExpandedBrandingId] = useState<string | null>(null);
+  const [expandedDangerId, setExpandedDangerId] = useState<string | null>(null);
   const [editingTenantId, setEditingTenantId] = useState<string | null>(null);
   const [tenantNameDraft, setTenantNameDraft] = useState('');
   const [savingTenant, setSavingTenant] = useState(false);
@@ -407,261 +408,273 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
         </div>
         {listError && <p className="text-xs text-red-400 mb-3">{listError}</p>}
         <p className="text-xs text-gray-500 mb-4">
-          Klik ikon pensil buat ganti nama barbershop, tombol branding untuk atur logo, atau klik jumlah outlet buat lihat cabang.
+          Klik ikon pensil untuk ganti nama, ikon gambar untuk atur branding, ikon cabang untuk kelola outlet, atau ikon tempat sampah untuk hapus.
         </p>
         {tenants.length === 0 ? (
           <p className="text-sm text-gray-400">Belum ada barbershop terdaftar.</p>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-[var(--border)]">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 bg-white/5">
-                  <th className="px-4 py-3 font-medium">Nama & Branding</th>
-                  <th className="px-4 py-3 font-medium">Slug</th>
-                  <th className="px-4 py-3 font-medium">Owner</th>
-                  <th className="px-4 py-3 font-medium">Outlet</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Terdaftar</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tenants.map((t) => (
-                  <Fragment key={t.id}>
-                    <tr className="border-t border-[var(--border)]">
-                      <td className="px-4 py-3 font-medium">
-                        {editingTenantId === t.id ? (
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="text"
-                              value={tenantNameDraft}
-                              onChange={(e) => setTenantNameDraft(e.target.value)}
-                              autoFocus
-                              className="bg-white/5 border border-primary rounded-lg px-2 py-1 text-sm focus:outline-none w-40"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => saveTenantName(t.id)}
-                              disabled={savingTenant}
-                              aria-label="Simpan nama barbershop"
-                              className="text-green-400 hover:text-green-300 disabled:opacity-50"
-                            >
-                              <Check className="h-4 w-4" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setEditingTenantId(null)}
-                              aria-label="Batal"
-                              className="text-gray-500 hover:text-gray-300"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col items-start gap-1">
-                            <div className="flex items-center gap-1.5">
-                              <span>{t.name}</span>
-                              <button
-                                type="button"
-                                onClick={() => startEditTenant(t)}
-                                aria-label="Ganti nama barbershop"
-                                className="text-gray-600 hover:text-primary transition-colors"
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => setExpandedBrandingId(expandedBrandingId === t.id ? null : t.id)}
-                              className="inline-flex items-center gap-1 text-[11px] bg-primary/10 text-primary px-2 py-0.5 rounded hover:bg-primary/20 transition-colors"
-                            >
-                              <ImageIcon className="h-3 w-3" />
-                              Atur Branding (Logo)
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-400 font-mono text-xs">{t.slug}</td>
-                      <td className="px-4 py-3 text-gray-300">
-                        {t.owner?.full_name ?? 'Tanpa nama'}
-                        <span className="text-gray-500"> · {t.owner?.phone ?? '-'}</span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-400">
+          <div className="space-y-3">
+            {tenants.map((t) => (
+              <div key={t.id} className="border border-[var(--border)] rounded-2xl overflow-hidden">
+                {/* Baris utama: info + aksi selalu terlihat */}
+                <div className="p-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <div className="min-w-[160px]">
+                    {editingTenantId === t.id ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={tenantNameDraft}
+                          onChange={(e) => setTenantNameDraft(e.target.value)}
+                          autoFocus
+                          className="bg-white/5 border border-primary rounded-lg px-2 py-1 text-sm focus:outline-none w-36"
+                        />
                         <button
                           type="button"
-                          onClick={() => setExpandedBranchesId(expandedBranchesId === t.id ? null : t.id)}
-                          className="inline-flex items-center gap-1 hover:text-primary transition-colors"
+                          onClick={() => saveTenantName(t.id)}
+                          disabled={savingTenant}
+                          aria-label="Simpan nama barbershop"
+                          className="text-green-400 hover:text-green-300 disabled:opacity-50"
                         >
-                          {expandedBranchesId === t.id ? (
-                            <ChevronDown className="h-3.5 w-3.5" />
-                          ) : (
-                            <ChevronRight className="h-3.5 w-3.5" />
-                          )}
-                          {t.branches.length} outlet
+                          <Check className="h-4 w-4" />
                         </button>
-                      </td>
-                      <td className="px-4 py-3">
                         <button
                           type="button"
-                          onClick={() => toggleStatus(t)}
-                          title={t.status === 'active' ? 'Klik untuk menonaktifkan' : 'Klik untuk mengaktifkan'}
-                          className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-colors ${t.status === 'active'
-                            ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
-                            : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                            }`}
+                          onClick={() => setEditingTenantId(null)}
+                          aria-label="Batal"
+                          className="text-gray-500 hover:text-gray-300"
                         >
-                          <Power className="h-3 w-3" />
-                          {t.status === 'active' ? 'Aktif' : 'Nonaktif'}
+                          <X className="h-4 w-4" />
                         </button>
-                      </td>
-                      <td className="px-4 py-3 text-gray-400 whitespace-nowrap">{formatDate(t.created_at)}</td>
-                    </tr>
-
-                    {/* Area Pengaturan Branding (Expanded) */}
-                    {expandedBrandingId === t.id && (
-                      <tr className="border-t border-[var(--border)] bg-white/[0.02]">
-                        <td colSpan={6} className="px-4 py-5">
-                          <BrandingSettings
-                            tenantId={t.id}
-                            // Memastikan kompatibilitas antara schema lama (app_name) dan baru (branding_name)
-                            currentAppName={(t as any).branding_name ?? (t as any).app_name}
-                            currentLogoUrl={t.logo_url}
-                            fallbackName={t.name}
-                          />
-                        </td>
-                      </tr>
+                      </div>
+                    ) : (
+                      <p className="font-semibold">{t.name}</p>
                     )}
+                    <p className="text-xs text-gray-500 font-mono mt-0.5">{t.slug}</p>
+                  </div>
 
-                    {/* Area Pengaturan Outlet (Expanded) */}
-                    {expandedBranchesId === t.id && (
-                      <tr className="border-t border-[var(--border)] bg-white/[0.02]">
-                        <td colSpan={6} className="px-4 py-3">
-                          {t.branches.length === 0 ? (
-                            <p className="text-xs text-gray-500 pl-6">Belum ada outlet.</p>
-                          ) : (
-                            <ul className="space-y-1.5 pl-6">
-                              {t.branches.map((b) => (
-                                <li key={b.id} className="flex items-center gap-1.5 text-sm">
-                                  {editingBranchId === b.id ? (
-                                    <>
-                                      <input
-                                        type="text"
-                                        value={branchNameDraft}
-                                        onChange={(e) => setBranchNameDraft(e.target.value)}
-                                        autoFocus
-                                        className="bg-white/5 border border-primary rounded-lg px-2 py-1 text-sm focus:outline-none w-40"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => saveBranchName(b.id)}
-                                        disabled={savingBranch}
-                                        aria-label="Simpan nama outlet"
-                                        className="text-green-400 hover:text-green-300 disabled:opacity-50"
-                                      >
-                                        <Check className="h-3.5 w-3.5" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => setEditingBranchId(null)}
-                                        aria-label="Batal"
-                                        className="text-gray-500 hover:text-gray-300"
-                                      >
-                                        <X className="h-3.5 w-3.5" />
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <span className="text-gray-300">{b.name}</span>
-                                      <button
-                                        type="button"
-                                        onClick={() => startEditBranch(b)}
-                                        aria-label="Ganti nama outlet"
-                                        className="text-gray-600 hover:text-primary"
-                                      >
-                                        <Pencil className="h-3 w-3" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => resetBranch(b.id, b.name)}
-                                        aria-label="Reset data operasional outlet"
-                                        title="Reset data operasional (transaksi, booking, shift, absensi)"
-                                        className="text-gray-600 hover:text-amber-400"
-                                      >
-                                        <RotateCcw className="h-3 w-3" />
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => deleteBranch(b.id, b.name)}
-                                        aria-label="Hapus outlet"
-                                        className="text-gray-600 hover:text-red-400"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </button>
-                                    </>
-                                  )}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                          <div className="flex items-center gap-2 pl-6 mt-3">
-                            <MapPin className="h-3.5 w-3.5 text-gray-500 shrink-0" />
-                            <input
-                              type="text"
-                              value={newBranchName}
-                              onChange={(e) => setNewBranchName(e.target.value)}
-                              placeholder="Nama outlet baru"
-                              className="bg-white/5 border border-[var(--border)] rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-primary w-44"
-                            />
-                            <input
-                              type="text"
-                              value={newBranchAddress}
-                              onChange={(e) => setNewBranchAddress(e.target.value)}
-                              placeholder="Alamat (opsional)"
-                              className="bg-white/5 border border-[var(--border)] rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-primary w-52"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => addBranch(t)}
-                              disabled={!newBranchName.trim() || addingBranchToTenantId === t.id}
-                              className="inline-flex items-center gap-1 bg-primary hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors"
-                            >
-                              <Plus className="h-3.5 w-3.5" />
-                              {addingBranchToTenantId === t.id ? 'Menambah...' : 'Tambah Cabang'}
-                            </button>
-                          </div>
+                  <div className="text-sm text-gray-300">
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">Owner</p>
+                    {t.owner?.full_name ?? 'Tanpa nama'}
+                    <span className="text-gray-500"> · {t.owner?.phone ?? '-'}</span>
+                  </div>
 
-                          <div className="pl-6 mt-4 pt-3 border-t border-[var(--border)] flex items-center justify-between gap-3 flex-wrap">
-                            <p className="text-xs text-gray-500 max-w-md">
-                              Reset barbershop menghapus semua transaksi, booking, shift, petty cash, absensi, riwayat
-                              payroll &amp; kasbon di seluruh cabang. Saldo wallet, layanan, dan staff tidak terpengaruh.
-                              Hapus barbershop menghapus tenant beserta seluruh cabangnya secara permanen.
-                            </p>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <button
-                                type="button"
-                                onClick={() => resetTenant(t)}
-                                className="inline-flex items-center gap-1.5 border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                              >
-                                <RotateCcw className="h-3.5 w-3.5" />
-                                Reset Seluruh Barbershop
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => deleteTenant(t)}
-                                disabled={deletingTenantId === t.id}
-                                className="inline-flex items-center gap-1.5 border border-red-500/40 text-red-400 hover:bg-red-500/10 disabled:opacity-50 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                {deletingTenantId === t.id ? 'Menghapus...' : 'Hapus Barbershop'}
-                              </button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
+                  <div className="text-sm">
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 mb-0.5">Terdaftar</p>
+                    <span className="text-gray-400">{formatDate(t.created_at)}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => toggleStatus(t)}
+                    title={t.status === 'active' ? 'Klik untuk menonaktifkan' : 'Klik untuk mengaktifkan'}
+                    className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full transition-colors ${t.status === 'active'
+                      ? 'bg-green-500/20 text-green-400 hover:bg-green-500/30'
+                      : 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
+                      }`}
+                  >
+                    <Power className="h-3 w-3" />
+                    {t.status === 'active' ? 'Aktif' : 'Nonaktif'}
+                  </button>
+
+                  {/* Grup tombol aksi — selalu terlihat, tidak perlu expand */}
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <button
+                      type="button"
+                      onClick={() => startEditTenant(t)}
+                      title="Ganti nama barbershop"
+                      className="p-2 rounded-lg text-gray-400 hover:text-primary hover:bg-primary/10 transition-colors"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedBrandingId(expandedBrandingId === t.id ? null : t.id)}
+                      title="Atur branding (logo)"
+                      className={`p-2 rounded-lg transition-colors ${expandedBrandingId === t.id ? 'text-primary bg-primary/10' : 'text-gray-400 hover:text-primary hover:bg-primary/10'}`}
+                    >
+                      <ImageIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedBranchesId(expandedBranchesId === t.id ? null : t.id)}
+                      title="Kelola cabang/outlet"
+                      className={`inline-flex items-center gap-1 px-2.5 py-2 rounded-lg text-sm transition-colors ${expandedBranchesId === t.id ? 'text-primary bg-primary/10' : 'text-gray-400 hover:text-primary hover:bg-primary/10'}`}
+                    >
+                      <MapPin className="h-4 w-4" />
+                      {t.branches.length}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedDangerId(expandedDangerId === t.id ? null : t.id)}
+                      title="Reset atau hapus barbershop"
+                      className={`p-2 rounded-lg transition-colors ${expandedDangerId === t.id ? 'text-red-400 bg-red-500/10' : 'text-gray-400 hover:text-red-400 hover:bg-red-500/10'}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Area Branding (Expanded) */}
+                {expandedBrandingId === t.id && (
+                  <div className="border-t border-[var(--border)] bg-white/[0.02] p-4">
+                    <BrandingSettings
+                      tenantId={t.id}
+                      // Memastikan kompatibilitas antara schema lama (app_name) dan baru (branding_name)
+                      currentAppName={(t as any).branding_name ?? (t as any).app_name}
+                      currentLogoUrl={t.logo_url}
+                      fallbackName={t.name}
+                    />
+                  </div>
+                )}
+
+                {/* Area Cabang/Outlet (Expanded) */}
+                {expandedBranchesId === t.id && (
+                  <div className="border-t border-[var(--border)] bg-white/[0.02] p-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Cabang / Outlet</p>
+                    {t.branches.length === 0 ? (
+                      <p className="text-xs text-gray-500 mb-3">Belum ada outlet.</p>
+                    ) : (
+                      <ul className="space-y-1.5 mb-3">
+                        {t.branches.map((b) => (
+                          <li key={b.id} className="flex items-center gap-1.5 text-sm">
+                            {editingBranchId === b.id ? (
+                              <>
+                                <input
+                                  type="text"
+                                  value={branchNameDraft}
+                                  onChange={(e) => setBranchNameDraft(e.target.value)}
+                                  autoFocus
+                                  className="bg-white/5 border border-primary rounded-lg px-2 py-1 text-sm focus:outline-none w-40"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => saveBranchName(b.id)}
+                                  disabled={savingBranch}
+                                  aria-label="Simpan nama outlet"
+                                  className="text-green-400 hover:text-green-300 disabled:opacity-50"
+                                >
+                                  <Check className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingBranchId(null)}
+                                  aria-label="Batal"
+                                  className="text-gray-500 hover:text-gray-300"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-gray-300">{b.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => startEditBranch(b)}
+                                  aria-label="Ganti nama outlet"
+                                  className="text-gray-600 hover:text-primary"
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => resetBranch(b.id, b.name)}
+                                  aria-label="Reset data operasional outlet"
+                                  title="Reset data operasional (transaksi, booking, shift, absensi)"
+                                  className="text-gray-600 hover:text-amber-400"
+                                >
+                                  <RotateCcw className="h-3 w-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => deleteBranch(b.id, b.name)}
+                                  aria-label="Hapus outlet"
+                                  className="text-gray-600 hover:text-red-400"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </button>
+                              </>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-3.5 w-3.5 text-gray-500 shrink-0" />
+                      <input
+                        type="text"
+                        value={newBranchName}
+                        onChange={(e) => setNewBranchName(e.target.value)}
+                        placeholder="Nama outlet baru"
+                        className="bg-white/5 border border-[var(--border)] rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-primary w-44"
+                      />
+                      <input
+                        type="text"
+                        value={newBranchAddress}
+                        onChange={(e) => setNewBranchAddress(e.target.value)}
+                        placeholder="Alamat (opsional)"
+                        className="bg-white/5 border border-[var(--border)] rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-primary w-52"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => addBranch(t)}
+                        disabled={!newBranchName.trim() || addingBranchToTenantId === t.id}
+                        className="inline-flex items-center gap-1 bg-primary hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium px-2.5 py-1.5 rounded-lg transition-colors"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        {addingBranchToTenantId === t.id ? 'Menambah...' : 'Tambah Cabang'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Zona Berbahaya: Reset & Hapus (Expanded) */}
+                {expandedDangerId === t.id && (
+                  <div className="border-t border-[var(--border)] bg-red-500/[0.03] p-4">
+                    <div className="flex items-center gap-1.5 mb-3">
+                      <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
+                      <p className="text-xs font-semibold text-red-400 uppercase tracking-wider">Zona Berbahaya</p>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 flex-wrap py-2.5 border-b border-[var(--border)]">
+                      <div>
+                        <p className="text-sm font-medium">Reset Seluruh Barbershop</p>
+                        <p className="text-xs text-gray-500 max-w-md">
+                          Menghapus semua transaksi, booking, shift, petty cash, absensi, riwayat payroll &amp; kasbon di
+                          seluruh cabang. Saldo wallet, layanan, dan staff tidak terpengaruh.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => resetTenant(t)}
+                        className="inline-flex items-center gap-1.5 border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Reset
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 flex-wrap pt-3">
+                      <div>
+                        <p className="text-sm font-medium">Hapus Barbershop</p>
+                        <p className="text-xs text-gray-500 max-w-md">
+                          Menghapus tenant beserta seluruh cabangnya secara permanen. Owner akan diturunkan jadi customer.
+                          Hanya bisa dilakukan kalau tidak ada riwayat transaksi/booking/shift/absensi dan tidak ada staff aktif.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => deleteTenant(t)}
+                        disabled={deletingTenantId === t.id}
+                        className="inline-flex items-center gap-1.5 bg-red-500/20 border border-red-500/40 text-red-400 hover:bg-red-500/30 disabled:opacity-50 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {deletingTenantId === t.id ? 'Menghapus...' : 'Hapus'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

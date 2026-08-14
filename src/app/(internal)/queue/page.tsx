@@ -1,14 +1,14 @@
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentProfile } from '@/lib/supabase/current-profile';
-import { getMyStaffBranches } from '@/lib/supabase/staff-branches';
+import { getBranchesForCurrentUser } from '@/lib/supabase/staff-branches';
 import type { Booking } from '@/lib/supabase/types';
 import WalkinCheckin from './walkin-checkin';
 import QueueBoard from './queue-board';
 import BranchPicker from './branch-picker';
+import { ManagedBranchEmpty } from '../managed-branch-empty';
 
 export type BookingWithItems = Booking & { booking_items: { service_name: string }[] };
 export type UpcomingBooking = BookingWithItems & { barber: { full_name: string | null } | null };
-// In Progress butuh total durasi (menit) untuk hitung mundur batas waktu cukur di Queue Management.
 export type InProgressBooking = BookingWithItems & { total_duration_minutes: number };
 export type BarberOption = { id: string; full_name: string | null };
 export type ServiceOption = { id: string; name: string; price: number };
@@ -19,9 +19,9 @@ export default async function QueueManagementPage({
   searchParams: Promise<{ branch?: string }>;
 }) {
   const current = await getCurrentProfile();
-  const staffBranches = current ? await getMyStaffBranches() : [];
+  const branchesResult = current ? await getBranchesForCurrentUser() : { status: 'no_branches' as const };
 
-  if (!current || staffBranches.length === 0) {
+  if (!current || branchesResult.status === 'no_branches') {
     return (
       <div>
         <h1 className="text-3xl font-bold mb-8">Queue Management</h1>
@@ -31,6 +31,17 @@ export default async function QueueManagementPage({
       </div>
     );
   }
+
+  if (branchesResult.status === 'no_tenant_selected') {
+    return (
+      <div>
+        <h1 className="text-3xl font-bold mb-8">Queue Management</h1>
+        <ManagedBranchEmpty needsTenantSelection />
+      </div>
+    );
+  }
+
+  const staffBranches = branchesResult.branches;
 
   const { branch: branchParam } = await searchParams;
   const branchId =
@@ -51,8 +62,6 @@ export default async function QueueManagementPage({
       .select('*, booking_items(service_name)')
       .eq('branch_id', branchId)
       .in('status', ['pending', 'approved'])
-      // Online bookings can now be scheduled ahead — only show ones whose time has arrived,
-      // so a booking for next week doesn't show as "waiting" in today's live queue.
       .lte('scheduled_at', now.toISOString())
       .order('scheduled_at', { ascending: true }),
     supabase
@@ -98,7 +107,6 @@ export default async function QueueManagementPage({
   })[];
   const inProgress = inProgressRaw.map((b) => ({
     ...b,
-    // Total durasi = jumlah durasi tiap layanan booking; fallback 30 menit kalau data durasi kosong.
     total_duration_minutes:
       b.booking_items.reduce((sum, bi) => sum + (bi.service?.duration_minutes ?? 0), 0) || 30,
   })) as InProgressBooking[];

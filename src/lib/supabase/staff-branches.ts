@@ -22,3 +22,42 @@ export async function getMyStaffBranches(): Promise<StaffBranchOption[]> {
   const { data } = await supabase.from('branches').select('id, name').in('id', ids).order('name', { ascending: true });
   return (data as StaffBranchOption[] | null) ?? [];
 }
+import { cookies } from 'next/headers';
+import { getCurrentProfile } from './current-profile';
+import { MANAGE_TENANT_COOKIE } from '@/lib/manage-tenant';
+
+export type BranchesForUserResult =
+  | { status: 'ok'; branches: StaffBranchOption[] }
+  | { status: 'no_tenant_selected' }
+  | { status: 'no_branches' };
+
+/**
+ * Cabang yang boleh diakses user saat ini di halaman operasional (POS, Queue).
+ * Staff biasa: dari assignment staff-ke-cabang (getMyStaffBranches).
+ * Superadmin: dari tenant aktif yang dia pilih lewat switcher (cookie manage_tenant),
+ * bukan dari staff assignment — karena superadmin memang tidak di-assign ke cabang manapun.
+ */
+export async function getBranchesForCurrentUser(): Promise<BranchesForUserResult> {
+  const current = await getCurrentProfile();
+  if (!current) return { status: 'no_branches' };
+
+  if (current.profile.role === 'superadmin') {
+    const cookieStore = await cookies();
+    const managedTenantId = cookieStore.get(MANAGE_TENANT_COOKIE)?.value ?? null;
+
+    if (!managedTenantId) return { status: 'no_tenant_selected' };
+
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from('branches')
+      .select('id, name')
+      .eq('tenant_id', managedTenantId)
+      .order('name', { ascending: true });
+
+    const branches = (data as StaffBranchOption[] | null) ?? [];
+    return branches.length === 0 ? { status: 'no_branches' } : { status: 'ok', branches };
+  }
+
+  const branches = await getMyStaffBranches();
+  return branches.length === 0 ? { status: 'no_branches' } : { status: 'ok', branches };
+}

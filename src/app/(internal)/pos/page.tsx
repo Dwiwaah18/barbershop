@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server';
 import { getCurrentProfile } from '@/lib/supabase/current-profile';
-import { getMyStaffBranches } from '@/lib/supabase/staff-branches';
+import { getBranchesForCurrentUser } from '@/lib/supabase/staff-branches';
 import type { Service } from '@/lib/supabase/types';
 import PosClient from './pos-client';
 import BranchPicker from './branch-picker';
+import { ManagedBranchEmpty } from '../managed-branch-empty';
 
 export default async function POSPage({
   searchParams,
@@ -24,9 +25,18 @@ export default async function POSPage({
   }
 
   const { userId } = current;
-  const myBranches = await getMyStaffBranches();
+  const branchesResult = await getBranchesForCurrentUser();
 
-  if (myBranches.length === 0) {
+  if (branchesResult.status === 'no_tenant_selected') {
+    return (
+      <div>
+        <h1 className="text-3xl font-bold mb-8">Point of Sales</h1>
+        <ManagedBranchEmpty needsTenantSelection />
+      </div>
+    );
+  }
+
+  if (branchesResult.status === 'no_branches') {
     return (
       <div>
         <h1 className="text-3xl font-bold mb-8">Point of Sales</h1>
@@ -37,6 +47,8 @@ export default async function POSPage({
     );
   }
 
+  const myBranches = branchesResult.branches;
+
   const { branch: branchParam } = await searchParams;
   const branchId =
     (branchParam && myBranches.some((b) => b.id === branchParam) ? branchParam : undefined) ??
@@ -46,15 +58,11 @@ export default async function POSPage({
 
   const [{ data }, { data: branchRow }] = await Promise.all([
     supabase.from('services').select('*').eq('branch_id', branchId).order('name', { ascending: true }),
-    // PERBAIKAN: Menggunakan relasi tabel 'tenants' untuk mengambil qris_image_url
     supabase.from('branches').select('tenant:tenants(qris_image_url)').eq('id', branchId).single(),
   ]);
 
   const services = (data ?? []) as Service[];
-
-  // PERBAIKAN: Penarikan data diperbaiki agar tidak mengembalikan null secara diam-diam
   const qrisImageUrl = (branchRow as any)?.tenant?.qris_image_url ?? null;
-
   const branchName = myBranches.find((b) => b.id === branchId)?.name ?? 'Cabang';
 
   return (

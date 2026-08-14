@@ -42,7 +42,7 @@ export async function Navbar() {
               </Link>
             )}
           </div>
-          <mobilenav issignedin={!!user} />
+          <MobileNav isSignedIn={!!user} />
         </div>
       </div>
     </nav>

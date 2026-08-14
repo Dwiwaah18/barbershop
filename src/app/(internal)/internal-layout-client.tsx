@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, Users2, ShoppingCart, Clock, ClipboardCheck,
-  Scissors, Wallet, UserCog, Scroll, DollarSign, ArrowLeft, FileBarChart,
+  Scissors, Wallet, UserCog, UserCircle, Scroll, DollarSign, ArrowLeft, FileBarChart,
   PiggyBank, ClipboardList, Building2, MapPin, Menu, X
 } from 'lucide-react';
 import SuperadminTenantSwitcher from './superadmin-tenant-switcher';
@@ -191,6 +191,10 @@ export default function InternalLayoutClient({
               <Link href="/staff" className={`flex items-center px-3 py-2.5 rounded-lg transition-colors ${pathname === '/staff' ? 'bg-primary/20 text-primary' : 'hover:bg-primary/10 hover:text-primary text-gray-400'}`}>
                 <UserCog className="h-5 w-5 mr-3" />
                 Staff Management
+              </Link>
+              <Link href="/customers" className={`flex items-center px-3 py-2.5 rounded-lg transition-colors ${pathname === '/customers' ? 'bg-primary/20 text-primary' : 'hover:bg-primary/10 hover:text-primary text-gray-400'}`}>
+                <UserCircle className="h-5 w-5 mr-3" />
+                Pelanggan
               </Link>
               <Link href="/services" className={`flex items-center px-3 py-2.5 rounded-lg transition-colors ${pathname === '/services' ? 'bg-primary/20 text-primary' : 'hover:bg-primary/10 hover:text-primary text-gray-400'}`}>
                 <Scroll className="h-5 w-5 mr-3" />

@@ -38,9 +38,15 @@ export default async function StaffPage({
     tenantId = tenantParam && tenants.some((t) => t.id === tenantParam) ? tenantParam : null;
   }
 
-  let profileQuery = supabase.from('profiles').select('*').order('created_at', { ascending: false });
+  // Staff Management sekarang cuma nampilin profile yang BUKAN customer.
+  // Pencarian & promosi pelanggan (jadi kapster/kasir) pindah ke halaman /customers.
+  let profileQuery = supabase
+    .from('profiles')
+    .select('*')
+    .neq('role', 'customer')
+    .order('created_at', { ascending: false });
   if (isSuperadmin && tenantId) {
-    profileQuery = profileQuery.or(`tenant_id.eq.${tenantId},and(tenant_id.is.null,role.eq.customer)`);
+    profileQuery = profileQuery.eq('tenant_id', tenantId);
   }
 
   const branchQuery = isSuperadmin
@@ -70,8 +76,9 @@ export default async function StaffPage({
     <div>
       <h1 className="text-3xl font-bold mb-2">Staff Management</h1>
       <p className="text-gray-400 mb-8">
-        Cari pelanggan lalu jadikan kapster/kasir, atur cabang utama, dan tambahkan cabang lain kalau staff
-        bertugas di lebih dari satu cabang.
+        Kelola staff yang sudah aktif: atur role, cabang utama, cabang tambahan, status kapster, dan gaji
+        bulanan. Untuk mencari pelanggan dan menjadikannya kapster/kasir, buka halaman{' '}
+        <span className="text-primary">Pelanggan</span>.
       </p>
       <TenantPicker tenants={tenants} selectedTenantId={tenantId} />
       <StaffTable

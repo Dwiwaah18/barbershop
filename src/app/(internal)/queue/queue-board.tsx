@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Clock, CheckCircle, CalendarClock, AlarmClock, TimerReset } from 'lucide-react';
+import { Clock, CheckCircle, CalendarClock, AlarmClock, TimerReset, Scissors } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { BookingWithItems, InProgressBooking, UpcomingBooking, BarberOption } from './page';
 
@@ -65,7 +65,7 @@ export default function QueueBoard({
   completedCount,
   barbers,
 }: {
-  waiting: BookingWithItems[];
+  waiting: UpcomingBooking[];
   upcoming: UpcomingBooking[];
   inProgress: InProgressBooking[];
   completed: BookingWithItems[];
@@ -90,7 +90,7 @@ export default function QueueBoard({
   // Minta izin notifikasi browser sekali (best-effort — kalau ditolak, alert visual tetap jalan).
   useEffect(() => {
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
+      Notification.requestPermission().catch(() => { });
     }
   }, []);
 
@@ -125,8 +125,8 @@ export default function QueueBoard({
     });
   };
 
-  const handleAssign = async (bookingId: string) => {
-    const barberId = selectedBarber[bookingId] ?? barbers[0]?.id;
+  const handleAssign = async (bookingId: string, explicitBarberId?: string) => {
+    const barberId = explicitBarberId ?? selectedBarber[bookingId] ?? barbers[0]?.id;
     if (!barberId) return;
     setPending(bookingId, true);
     setRowError((prev) => ({ ...prev, [bookingId]: '' }));
@@ -220,165 +220,179 @@ export default function QueueBoard({
         )}
       </div>
 
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Waiting */}
-      <div className="glass-panel p-6 rounded-2xl">
-        <div className="flex items-center gap-2 mb-4 border-b border-[var(--border)] pb-4">
-          <div className="w-3 h-3 rounded-full bg-amber-500"></div>
-          <h2 className="text-xl font-semibold">Waiting ({waiting.length})</h2>
-        </div>
-        <div className="space-y-3">
-          {waiting.length === 0 && (
-            <p className="text-sm text-gray-400">Belum ada antrian menunggu.</p>
-          )}
-          {waiting.map((booking) => (
-            <div key={booking.id} className="p-4 bg-white/5 border border-[var(--border)] rounded-xl">
-              <div className="flex justify-between mb-2">
-                <span className="font-bold">{booking.customer_name ?? 'Pelanggan'}</span>
-                <span className="text-xs text-gray-400">{timeAgo(booking.created_at)}</span>
-              </div>
-              <p className="text-sm text-gray-400 mb-3">{serviceNames(booking)}</p>
-              {barbers.length === 0 ? (
-                <button
-                  disabled
-                  className="w-full bg-white/5 text-gray-500 py-1.5 rounded-lg text-sm cursor-not-allowed"
-                >
-                  Belum ada barber di cabang ini
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <select
-                    className="flex-1 bg-white/10 border border-[var(--border)] rounded-lg text-sm px-2 py-1.5"
-                    value={selectedBarber[booking.id] ?? barbers[0].id}
-                    onChange={(e) =>
-                      setSelectedBarber((prev) => ({ ...prev, [booking.id]: e.target.value }))
-                    }
-                  >
-                    {barbers.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.full_name ?? 'Tanpa nama'}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => handleAssign(booking.id)}
-                    disabled={pendingIds.has(booking.id)}
-                    className="bg-white/10 hover:bg-white/20 disabled:opacity-50 px-3 py-1.5 rounded-lg text-sm transition-colors whitespace-nowrap"
-                  >
-                    Assign
-                  </button>
-                </div>
-              )}
-              {rowError[booking.id] && (
-                <p className="text-xs text-red-400 mt-2">{rowError[booking.id]}</p>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* In Progress */}
-      <div className="glass-panel p-6 rounded-2xl">
-        <div className="flex items-center gap-2 mb-4 border-b border-[var(--border)] pb-4">
-          <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-          <h2 className="text-xl font-semibold">In Progress ({inProgress.length})</h2>
-        </div>
-        <div className="space-y-3">
-          {inProgress.length === 0 && (
-            <p className="text-sm text-gray-400">Tidak ada yang sedang dikerjakan.</p>
-          )}
-          {inProgress.map((booking) => {
-            const barberName = barbers.find((b) => b.id === booking.barber_id)?.full_name ?? 'Barber';
-            const rem = remainingMs(booking.started_at, booking.total_duration_minutes, now);
-            const overtime = rem !== null && rem <= 0;
-            const warning = rem !== null && rem > 0 && rem <= WARNING_THRESHOLD_MS;
-            // Warna kartu ikut status waktu: merah (lewat) → amber (≤5 mnt) → biru (aman).
-            const accent = overtime ? 'red' : warning ? 'amber' : 'blue';
-            const cardBorder =
-              accent === 'red' ? 'border-red-500/50' : accent === 'amber' ? 'border-amber-500/50' : 'border-blue-500/30';
-            const barColor =
-              accent === 'red' ? 'bg-red-500' : accent === 'amber' ? 'bg-amber-500' : 'bg-blue-500';
-            const timeColor =
-              accent === 'red' ? 'text-red-400' : accent === 'amber' ? 'text-amber-400' : 'text-blue-400';
-            return (
-              <div
-                key={booking.id}
-                className={`p-4 bg-white/5 border ${cardBorder} rounded-xl relative overflow-hidden ${warning ? 'motion-safe:animate-pulse' : ''}`}
-              >
-                <div className={`absolute top-0 left-0 w-1 h-full ${barColor}`}></div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Waiting */}
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="flex items-center gap-2 mb-4 border-b border-[var(--border)] pb-4">
+            <div className="w-3 h-3 rounded-full bg-amber-500"></div>
+            <h2 className="text-xl font-semibold">Waiting ({waiting.length})</h2>
+          </div>
+          <div className="space-y-3">
+            {waiting.length === 0 && (
+              <p className="text-sm text-gray-400">Belum ada antrian menunggu.</p>
+            )}
+            {waiting.map((booking) => (
+              <div key={booking.id} className="p-4 bg-white/5 border border-[var(--border)] rounded-xl">
                 <div className="flex justify-between mb-2">
                   <span className="font-bold">{booking.customer_name ?? 'Pelanggan'}</span>
-                  <span className="text-xs text-gray-400 flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> Mulai {formatClock(booking.started_at)}
-                  </span>
+                  <span className="text-xs text-gray-400">{timeAgo(booking.created_at)}</span>
                 </div>
-                <p className="text-sm text-gray-400 mb-3">
-                  {serviceNames(booking)} ({barberName})
-                </p>
-
-                {rem !== null && (
-                  <div
-                    className={`flex items-center justify-between mb-3 px-3 py-2 rounded-lg text-sm font-semibold tabular-nums ${
-                      accent === 'red'
-                        ? 'bg-red-500/15 text-red-300'
-                        : accent === 'amber'
-                          ? 'bg-amber-500/15 text-amber-300'
-                          : 'bg-blue-500/10 text-blue-300'
-                    }`}
-                  >
-                    <span className="flex items-center gap-1.5">
-                      {overtime ? <AlarmClock className="h-4 w-4" /> : <TimerReset className="h-4 w-4" />}
-                      {overtime ? 'Lewat batas' : 'Sisa waktu'}
+                <p className="text-sm text-gray-400 mb-3">{serviceNames(booking)}</p>
+                {booking.barber_id ? (
+                  // Pelanggan sudah pilih kapster spesifik saat booking — tidak perlu pilih lagi.
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm text-gray-300 flex items-center gap-1.5">
+                      <Scissors className="h-3.5 w-3.5 text-primary" />
+                      {booking.barber?.full_name ?? 'Kapster pilihan'}
                     </span>
-                    <span className={timeColor}>{formatCountdown(rem)}</span>
+                    <button
+                      onClick={() => handleAssign(booking.id, booking.barber_id!)}
+                      disabled={pendingIds.has(booking.id)}
+                      className="bg-primary hover:bg-amber-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-sm transition-colors whitespace-nowrap"
+                    >
+                      Mulai
+                    </button>
+                  </div>
+                ) : barbers.length === 0 ? (
+                  <button
+                    disabled
+                    className="w-full bg-white/5 text-gray-500 py-1.5 rounded-lg text-sm cursor-not-allowed"
+                  >
+                    Belum ada barber di cabang ini
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <select
+                      className="flex-1 bg-white/10 border border-[var(--border)] rounded-lg text-sm px-2 py-1.5"
+                      value={selectedBarber[booking.id] ?? barbers[0].id}
+                      onChange={(e) =>
+                        setSelectedBarber((prev) => ({ ...prev, [booking.id]: e.target.value }))
+                      }
+                    >
+                      {barbers.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.full_name ?? 'Tanpa nama'}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => handleAssign(booking.id)}
+                      disabled={pendingIds.has(booking.id)}
+                      className="bg-white/10 hover:bg-white/20 disabled:opacity-50 px-3 py-1.5 rounded-lg text-sm transition-colors whitespace-nowrap"
+                    >
+                      Assign
+                    </button>
                   </div>
                 )}
-                {warning && (
-                  <p className="text-xs text-amber-400 mb-2 flex items-center gap-1">
-                    <AlarmClock className="h-3.5 w-3.5" /> 5 menit terakhir — segera selesaikan.
-                  </p>
-                )}
-
-                <button
-                  onClick={() => handleComplete(booking.id, booking.customer_name)}
-                  disabled={pendingIds.has(booking.id)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 py-1.5 rounded-lg text-sm transition-colors text-white"
-                >
-                  Mark Complete
-                </button>
                 {rowError[booking.id] && (
                   <p className="text-xs text-red-400 mt-2">{rowError[booking.id]}</p>
                 )}
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Completed */}
-      <div className="glass-panel p-6 rounded-2xl">
-        <div className="flex items-center gap-2 mb-4 border-b border-[var(--border)] pb-4">
-          <div className="w-3 h-3 rounded-full bg-green-500"></div>
-          <h2 className="text-xl font-semibold">Completed Today ({completedCount})</h2>
+        {/* In Progress */}
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="flex items-center gap-2 mb-4 border-b border-[var(--border)] pb-4">
+            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+            <h2 className="text-xl font-semibold">In Progress ({inProgress.length})</h2>
+          </div>
+          <div className="space-y-3">
+            {inProgress.length === 0 && (
+              <p className="text-sm text-gray-400">Tidak ada yang sedang dikerjakan.</p>
+            )}
+            {inProgress.map((booking) => {
+              const barberName = barbers.find((b) => b.id === booking.barber_id)?.full_name ?? 'Barber';
+              const rem = remainingMs(booking.started_at, booking.total_duration_minutes, now);
+              const overtime = rem !== null && rem <= 0;
+              const warning = rem !== null && rem > 0 && rem <= WARNING_THRESHOLD_MS;
+              // Warna kartu ikut status waktu: merah (lewat) → amber (≤5 mnt) → biru (aman).
+              const accent = overtime ? 'red' : warning ? 'amber' : 'blue';
+              const cardBorder =
+                accent === 'red' ? 'border-red-500/50' : accent === 'amber' ? 'border-amber-500/50' : 'border-blue-500/30';
+              const barColor =
+                accent === 'red' ? 'bg-red-500' : accent === 'amber' ? 'bg-amber-500' : 'bg-blue-500';
+              const timeColor =
+                accent === 'red' ? 'text-red-400' : accent === 'amber' ? 'text-amber-400' : 'text-blue-400';
+              return (
+                <div
+                  key={booking.id}
+                  className={`p-4 bg-white/5 border ${cardBorder} rounded-xl relative overflow-hidden ${warning ? 'motion-safe:animate-pulse' : ''}`}
+                >
+                  <div className={`absolute top-0 left-0 w-1 h-full ${barColor}`}></div>
+                  <div className="flex justify-between mb-2">
+                    <span className="font-bold">{booking.customer_name ?? 'Pelanggan'}</span>
+                    <span className="text-xs text-gray-400 flex items-center gap-1">
+                      <Clock className="h-3 w-3" /> Mulai {formatClock(booking.started_at)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-400 mb-3">
+                    {serviceNames(booking)} ({barberName})
+                  </p>
+
+                  {rem !== null && (
+                    <div
+                      className={`flex items-center justify-between mb-3 px-3 py-2 rounded-lg text-sm font-semibold tabular-nums ${accent === 'red'
+                          ? 'bg-red-500/15 text-red-300'
+                          : accent === 'amber'
+                            ? 'bg-amber-500/15 text-amber-300'
+                            : 'bg-blue-500/10 text-blue-300'
+                        }`}
+                    >
+                      <span className="flex items-center gap-1.5">
+                        {overtime ? <AlarmClock className="h-4 w-4" /> : <TimerReset className="h-4 w-4" />}
+                        {overtime ? 'Lewat batas' : 'Sisa waktu'}
+                      </span>
+                      <span className={timeColor}>{formatCountdown(rem)}</span>
+                    </div>
+                  )}
+                  {warning && (
+                    <p className="text-xs text-amber-400 mb-2 flex items-center gap-1">
+                      <AlarmClock className="h-3.5 w-3.5" /> 5 menit terakhir — segera selesaikan.
+                    </p>
+                  )}
+
+                  <button
+                    onClick={() => handleComplete(booking.id, booking.customer_name)}
+                    disabled={pendingIds.has(booking.id)}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 py-1.5 rounded-lg text-sm transition-colors text-white"
+                  >
+                    Mark Complete
+                  </button>
+                  {rowError[booking.id] && (
+                    <p className="text-xs text-red-400 mt-2">{rowError[booking.id]}</p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <div className="space-y-3 opacity-70">
-          {completed.length === 0 && (
-            <p className="text-sm text-gray-400">Belum ada transaksi selesai hari ini.</p>
-          )}
-          {completed.map((booking) => (
-            <div key={booking.id} className="p-4 bg-white/5 border border-green-500/20 rounded-xl">
-              <div className="flex justify-between mb-1">
-                <span className="font-bold flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" /> {booking.customer_name ?? 'Pelanggan'}
-                </span>
-                <span className="text-xs text-green-400">{formatClock(booking.completed_at)}</span>
+
+        {/* Completed */}
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="flex items-center gap-2 mb-4 border-b border-[var(--border)] pb-4">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <h2 className="text-xl font-semibold">Completed Today ({completedCount})</h2>
+          </div>
+          <div className="space-y-3 opacity-70">
+            {completed.length === 0 && (
+              <p className="text-sm text-gray-400">Belum ada transaksi selesai hari ini.</p>
+            )}
+            {completed.map((booking) => (
+              <div key={booking.id} className="p-4 bg-white/5 border border-green-500/20 rounded-xl">
+                <div className="flex justify-between mb-1">
+                  <span className="font-bold flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-500" /> {booking.customer_name ?? 'Pelanggan'}
+                  </span>
+                  <span className="text-xs text-green-400">{formatClock(booking.completed_at)}</span>
+                </div>
+                <p className="text-sm text-gray-400">{serviceNames(booking)}</p>
               </div>
-              <p className="text-sm text-gray-400">{serviceNames(booking)}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }

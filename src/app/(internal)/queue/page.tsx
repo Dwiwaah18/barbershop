@@ -59,9 +59,11 @@ export default async function QueueManagementPage({
     supabase.from('branches').select('name').eq('id', branchId).single(),
     supabase
       .from('bookings')
-      .select('*, booking_items(service_name)')
+      .select('*, booking_items(service_name), barber:barber_id(full_name)')
       .eq('branch_id', branchId)
       .in('status', ['pending', 'approved'])
+      // Online bookings can now be scheduled ahead — only show ones whose time has arrived,
+      // so a booking for next week doesn't show as "waiting" in today's live queue.
       .lte('scheduled_at', now.toISOString())
       .order('scheduled_at', { ascending: true }),
     supabase
@@ -100,13 +102,14 @@ export default async function QueueManagementPage({
   ]);
 
   const branchName = branchRes.data?.name ?? 'Cabang';
-  const waiting = (waitingRes.data ?? []) as BookingWithItems[];
+  const waiting = (waitingRes.data ?? []) as unknown as UpcomingBooking[];
   const upcoming = (upcomingRes.data ?? []) as unknown as UpcomingBooking[];
   const inProgressRaw = (inProgressRes.data ?? []) as unknown as (Booking & {
     booking_items: { service_name: string; service: { duration_minutes: number } | null }[];
   })[];
   const inProgress = inProgressRaw.map((b) => ({
     ...b,
+    // Total durasi = jumlah durasi tiap layanan booking; fallback 30 menit kalau data durasi kosong.
     total_duration_minutes:
       b.booking_items.reduce((sum, bi) => sum + (bi.service?.duration_minutes ?? 0), 0) || 30,
   })) as InProgressBooking[];

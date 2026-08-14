@@ -3,6 +3,7 @@ import { Scissors } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import { isSupabaseConfigured } from '@/lib/supabase/config';
 import { SignOutButton } from './SignOutButton';
+import MobileNav from './MobileNav';
 
 export async function Navbar() {
   let user = null;
@@ -28,7 +29,7 @@ export async function Navbar() {
               <Link href="/branches" className="hover:text-primary transition-colors px-3 py-2 rounded-md text-sm font-medium">Branches</Link>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="hidden md:flex items-center gap-4">
             {user ? (
               <>
                 <Link href="/my-bookings" className="hidden md:flex hover:text-primary transition-colors px-3 py-2 rounded-md text-sm font-medium">My Bookings</Link>
@@ -41,6 +42,7 @@ export async function Navbar() {
               </Link>
             )}
           </div>
+          <mobilenav issignedin={!!user} />
         </div>
       </div>
     </nav>

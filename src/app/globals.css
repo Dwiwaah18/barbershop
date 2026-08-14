@@ -51,3 +51,11 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+.safe-top {
+  padding-top: max(env(safe-area-inset-top), 0px);
+}
+
+.safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0px);
+}

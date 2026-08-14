@@ -90,7 +90,7 @@ export default function InternalLayoutClient({
         md:relative md:translate-x-0
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        <div className="h-16 flex items-center justify-between px-6 border-b border-[var(--border)] shrink-0 bg-black/20">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-[var(--border)] shrink-0 bg-black/20 safe-top">
           <Link href={homeHref} className="flex items-center hover:opacity-80 transition-opacity min-w-0">
             {brandLogoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -253,7 +253,7 @@ export default function InternalLayoutClient({
           </Link>
         </div>
 
-        <div className="p-4 border-t border-[var(--border)] shrink-0 bg-black/20">
+        <div className="p-4 border-t border-[var(--border)] shrink-0 bg-black/20 safe-bottom">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">{initial}</div>
             <div className="text-sm truncate flex-1 min-w-0">
@@ -278,7 +278,7 @@ export default function InternalLayoutClient({
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-900/50">
 
         {/* Mobile Header */}
-        <header className="md:hidden h-16 border-b border-[var(--border)] bg-slate-950/80 backdrop-blur-md flex items-center justify-between px-4 shrink-0 z-30">
+        <header className="md:hidden h-16 border-b border-[var(--border)] bg-slate-950/80 backdrop-blur-md flex items-center justify-between px-4 shrink-0 z-30 safe-top">
           <div className="flex items-center min-w-0">
             {brandLogoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element

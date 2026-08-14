@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard, Users, Users2, ShoppingCart, Clock, ClipboardCheck,
   Scissors, Wallet, UserCog, UserCircle, Scroll, DollarSign, ArrowLeft, FileBarChart,
-  PiggyBank, ClipboardList, Building2, MapPin, Menu, X
+  PiggyBank, ClipboardList, Building2, MapPin, Menu, X, LogOut
 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import SuperadminTenantSwitcher from './superadmin-tenant-switcher';
 
 const roleLabel: Record<string, string> = {
@@ -52,9 +53,19 @@ export default function InternalLayoutClient({
   brandLogoUrl,
 }: InternalLayoutClientProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const roleText = role ? roleLabel[role] ?? role : '';
   const displayBrandName = brandName ?? 'SystemPOS';
+
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/');
+    router.refresh();
+  };
 
   // Tutup sidebar jika route berubah (saat klik link di mobile)
   useEffect(() => {
@@ -243,12 +254,22 @@ export default function InternalLayoutClient({
         </div>
 
         <div className="p-4 border-t border-[var(--border)] shrink-0 bg-black/20">
-          <div className="flex items-center">
-            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary mr-3 shrink-0">{initial}</div>
-            <div className="text-sm truncate">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center font-bold text-primary shrink-0">{initial}</div>
+            <div className="text-sm truncate flex-1 min-w-0">
               <p className="font-medium text-white truncate">{displayName}</p>
               <p className="text-xs text-gray-400 truncate">{roleText}</p>
             </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={loggingOut}
+              title="Logout"
+              aria-label="Logout"
+              className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50 shrink-0"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </aside>

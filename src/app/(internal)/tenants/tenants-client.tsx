@@ -52,6 +52,7 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
   const [newBranchName, setNewBranchName] = useState('');
   const [newBranchAddress, setNewBranchAddress] = useState('');
   const [addingBranchToTenantId, setAddingBranchToTenantId] = useState<string | null>(null);
+  const [deletingTenantId, setDeletingTenantId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!slugTouched) setSlug(slugify(tenantName));
@@ -244,6 +245,26 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
       return;
     }
     setSuccess(`Barbershop "${tenant.name}" berhasil direset (data operasional semua cabang dihapus).`);
+    router.refresh();
+  };
+
+  const deleteTenant = async (tenant: TenantRow) => {
+    setListError(null);
+    if (
+      !window.confirm(
+        `HAPUS barbershop "${tenant.name}" secara permanen?\n\nSemua cabang, layanan, dan tier komisi barbershop ini akan ikut terhapus. Owner-nya akan diturunkan kembali jadi customer.\n\nBarbershop hanya bisa dihapus kalau tidak ada riwayat transaksi/booking/shift/absensi (reset dulu semua cabangnya kalau masih ada), dan tidak ada staff yang masih terdaftar di cabangnya.\n\nLanjutkan?`
+      )
+    )
+      return;
+    setDeletingTenantId(tenant.id);
+    const supabase = createClient();
+    const { error: rpcError } = await supabase.rpc('superadmin_delete_tenant', { target_tenant_id: tenant.id });
+    setDeletingTenantId(null);
+    if (rpcError) {
+      setListError(`Gagal menghapus barbershop: ${rpcError.message}`);
+      return;
+    }
+    setSuccess(`Barbershop "${tenant.name}" berhasil dihapus.`);
     router.refresh();
   };
 
@@ -612,15 +633,27 @@ export default function TenantsClient({ tenants }: { tenants: TenantRow[] }) {
                             <p className="text-xs text-gray-500 max-w-md">
                               Reset barbershop menghapus semua transaksi, booking, shift, petty cash, absensi, riwayat
                               payroll &amp; kasbon di seluruh cabang. Saldo wallet, layanan, dan staff tidak terpengaruh.
+                              Hapus barbershop menghapus tenant beserta seluruh cabangnya secara permanen.
                             </p>
-                            <button
-                              type="button"
-                              onClick={() => resetTenant(t)}
-                              className="inline-flex items-center gap-1.5 border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0"
-                            >
-                              <RotateCcw className="h-3.5 w-3.5" />
-                              Reset Seluruh Barbershop
-                            </button>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => resetTenant(t)}
+                                className="inline-flex items-center gap-1.5 border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Reset Seluruh Barbershop
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => deleteTenant(t)}
+                                disabled={deletingTenantId === t.id}
+                                className="inline-flex items-center gap-1.5 border border-red-500/40 text-red-400 hover:bg-red-500/10 disabled:opacity-50 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                {deletingTenantId === t.id ? 'Menghapus...' : 'Hapus Barbershop'}
+                              </button>
+                            </div>
                           </div>
                         </td>
                       </tr>
